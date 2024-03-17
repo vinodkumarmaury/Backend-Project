@@ -1,0 +1,16 @@
+{
+  "name": "backend-project",
+  "version": "1.0.0",
+  "description": "Professional Backend Setup",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "JavaScript",
+    "and",
+    "Backend"
+  ],
+  "author": "Vinod Kumar Maurya",
+  "license": "ISC"
+}
