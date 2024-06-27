@@ -3,7 +3,7 @@ const asyncHandler = (requestHandler) => {
         Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err))
     }
 }
-
+//next is used for middleware
 
 export { asyncHandler }
 
@@ -12,9 +12,7 @@ export { asyncHandler }
 
 // const asyncHandler = () => {}
 // const asyncHandler = (func) => () => {}
-// const asyncHandler = (func) => async () => {}
-
-
+// const asyncHandler = (func) => async () => {}  /// It is higher order function
 // const asyncHandler = (fn) => async (req, res, next) => {
 //     try {
 //         await fn(req, res, next)
