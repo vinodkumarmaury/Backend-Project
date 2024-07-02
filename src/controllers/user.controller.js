@@ -4,6 +4,22 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { User } from '../models/user.model.js';
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
+const generateAccessAndRefereshTokens = async(userId) =>{
+  try {
+      const user = await User.findById(userId)
+      const accessToken = user.generateAccessToken()
+      const refreshToken = user.generateRefreshToken()
+
+      user.refreshToken = refreshToken
+      await user.save({ validateBeforeSave: false })
+
+      return {accessToken, refreshToken}
+
+
+  } catch (error) {
+      throw new ApiError(500, "Something went wrong while generating referesh and access token")
+  }
+}
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
   console.log('email:', email);
@@ -56,4 +72,91 @@ const registerUser = asyncHandler(async (req, res) => {
   return res.status(201).json(new ApiResponse(201, createdUser, "User registered successfully"));
 });
 
-export default registerUser;
+
+const loginUser = asyncHandler(async (req, res) =>{
+  // req body -> data
+  // username or email
+  //find the user
+  //password check
+  //access and referesh token
+  //send cookie
+
+  const {email, username, password} = req.body
+  console.log(email);
+
+  if (!username && !email) {
+      throw new ApiError(400, "username or email is required")
+  }
+  
+  // Here is an alternative of above code based on logic discussed in video:
+  // if (!(username || email)) {
+  //     throw new ApiError(400, "username or email is required")
+      
+  // }
+
+  const user = await User.findOne({
+      $or: [{username}, {email}]
+  })
+
+  if (!user) {
+      throw new ApiError(404, "User does not exist")
+  }
+
+ const isPasswordValid = await user.isPasswordCorrect(password)
+
+ if (!isPasswordValid) {
+  throw new ApiError(401, "Invalid user credentials")
+  }
+
+ const {accessToken, refreshToken} = await generateAccessAndRefereshTokens(user._id)
+
+  const loggedInUser = await User.findById(user._id).select("-password -refreshToken") //password and refreshtoken don't want to send to user
+//cookies
+  const options = {
+      httpOnly: true,
+      secure: true
+  }
+
+  return res
+  .status(200)
+  .cookie("accessToken", accessToken, options)
+  .cookie("refreshToken", refreshToken, options)
+  .json(    // when user want to save cookies
+      new ApiResponse(
+          200, 
+          {
+              user: loggedInUser, accessToken, refreshToken
+          },
+          "User logged In Successfully"
+      )
+  )
+
+})
+
+//logout
+// but there is problem how to find user id so we use middleware to save id because we don't want to send it to user
+const logoutUser = asyncHandler(async(req, res) => {
+  await User.findByIdAndUpdate(
+      req.user._id,
+      {
+          $unset: {   //mogodb operator
+              refreshToken: 1 // this removes the field from document
+          }
+      },
+      {
+          new: true
+      }
+  )
+
+  const options = {
+      httpOnly: true,
+      secure: true
+  }
+
+  return res
+  .status(200)
+  .clearCookie("accessToken", options)
+  .clearCookie("refreshToken", options)
+  .json(new ApiResponse(200, {}, "User logged Out"))
+})
+export { registerUser,loginUser,logoutUser}
